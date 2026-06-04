@@ -271,6 +271,12 @@ const furnitureData = [];   // 家具加载信息
 let petMoveTimer = null, petStateTimer = null, petBlinkTimer = null;
 let petCurrentState = 'normal', petFacingRight = true;
 
+// 清除旧版 localStorage 位置数据（仅执行一次）
+if (!localStorage.getItem('_v2')) {
+    ['sofa_state','table_state','lamp_state','cushion_state','dressup_state','board_state','plant_state','shelf_state','pet_state','house_state'].forEach(k => localStorage.removeItem(k));
+    localStorage.setItem('_v2', '1');
+}
+
 function init() {
     const W = window.innerWidth;
     const H = window.innerHeight;
