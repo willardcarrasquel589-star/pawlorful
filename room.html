@@ -324,7 +324,7 @@ function init() {
             scaleY: ratio,
             angle: 0,
             furnitureType: '换装图标',
-            hasControls: false, hasBorders: false, selectable: false, lockMovementX: true, lockMovementY: true, lockRotation: false,
+            hasControls: true, hasBorders: true, selectable: true, lockRotation: false,
         });
         canvas.add(fImg);
         canvas.renderAll();
@@ -417,8 +417,8 @@ function loadFurniture(W, H) {
             scaleY: ratio,
             angle: 0,
             furnitureType: '沙发',
-            hasControls: false, hasBorders: false, selectable: false, lockMovementX: true, lockMovementY: true,
-            lockRotation: true,
+            hasControls: true, hasBorders: true, selectable: true,
+            lockRotation: false,
         });
         canvas.add(fImg);
         canvas.renderAll();
@@ -438,8 +438,8 @@ function loadFurniture(W, H) {
             scaleY: ratio,
             angle: 0,
             furnitureType: '桌子',
-            hasControls: false, hasBorders: false, selectable: false, lockMovementX: true, lockMovementY: true,
-            lockRotation: true,
+            hasControls: true, hasBorders: true, selectable: true,
+            lockRotation: false,
         });
         canvas.add(fImg);
         canvas.renderAll();
@@ -459,8 +459,8 @@ function loadFurniture(W, H) {
             scaleY: ratio,
             angle: 0,
             furnitureType: '落地灯',
-            hasControls: false, hasBorders: false, selectable: false, lockMovementX: true, lockMovementY: true,
-            lockRotation: true,
+            hasControls: true, hasBorders: true, selectable: true,
+            lockRotation: false,
         });
         canvas.add(fImg);
         canvas.renderAll();
@@ -480,8 +480,8 @@ function loadFurniture(W, H) {
             scaleY: ratio,
             angle: 0,
             furnitureType: '坐垫',
-            hasControls: false, hasBorders: false, selectable: false, lockMovementX: true, lockMovementY: true,
-            lockRotation: true,
+            hasControls: true, hasBorders: true, selectable: true,
+            lockRotation: false,
         });
         canvas.add(fImg);
         canvas.renderAll();
@@ -501,7 +501,7 @@ function loadFurniture(W, H) {
             scaleY: ratio,
             angle: 0,
             furnitureType: '换装图标',
-            hasControls: false, hasBorders: false, selectable: false, lockMovementX: true, lockMovementY: true, lockRotation: false,
+            hasControls: true, hasBorders: true, selectable: true, lockRotation: false,
         });
         canvas.add(fImg);
         canvas.renderAll();
@@ -521,7 +521,7 @@ function loadFurniture(W, H) {
             scaleY: ratio,
             angle: 0,
             furnitureType: '房子图标',
-            hasControls: false, hasBorders: false, selectable: false, lockMovementX: true, lockMovementY: true, lockRotation: true,
+            hasControls: true, hasBorders: true, selectable: true, lockRotation: true,
         });
         canvas.add(fImg);
         canvas.renderAll();
@@ -541,8 +541,8 @@ function loadFurniture(W, H) {
             scaleY: ratio,
             angle: 0,
             furnitureType: '公告栏',
-            hasControls: false, hasBorders: false, selectable: false, lockMovementX: true, lockMovementY: true,
-            lockRotation: true,
+            hasControls: true, hasBorders: true, selectable: true,
+            lockRotation: false,
         });
         canvas.add(fImg);
 
@@ -582,8 +582,8 @@ function loadFurniture(W, H) {
             scaleY: ratio,
             angle: 0,
             furnitureType: '盆栽',
-            hasControls: false, hasBorders: false, selectable: false, lockMovementX: true, lockMovementY: true,
-            lockRotation: true,
+            hasControls: true, hasBorders: true, selectable: true,
+            lockRotation: false,
         });
         canvas.add(fImg);
         canvas.renderAll();
@@ -603,8 +603,8 @@ function loadFurniture(W, H) {
             scaleY: ratio,
             angle: 0,
             furnitureType: '书架',
-            hasControls: false, hasBorders: false, selectable: false, lockMovementX: true, lockMovementY: true,
-            lockRotation: true,
+            hasControls: true, hasBorders: true, selectable: true,
+            lockRotation: false,
         });
         canvas.add(fImg);
         canvas.renderAll();
@@ -764,8 +764,8 @@ function loadFurniture(W, H) {
                 scaleX: item.scale, scaleY: item.scale,
                 angle: 0,
                 furnitureType: item.name,
-                hasControls: false, hasBorders: false, selectable: false, lockMovementX: true, lockMovementY: true,
-                lockRotation: true,
+                hasControls: true, hasBorders: true, selectable: true,
+                lockRotation: false,
             });
             canvas.add(img);
             if (item.name === '地毯') img.moveTo(bgElements.length); // 仅次于背景层
@@ -1371,6 +1371,23 @@ function sharePet(platform) {
     window.open(urls[platform], '_blank');
 }
 </script>
+
+<button onclick="dumpPositions()" style="position:fixed;bottom:80px;right:12px;z-index:2000;background:#333;color:#fff;border:none;border-radius:12px;padding:8px 14px;font-size:13px;cursor:pointer;font-family:Microsoft YaHei;">导出位置</button>
+<script>
+function dumpPositions() {
+    const objs = canvas.getObjects().filter(o => o.furnitureType);
+    const data = {};
+    objs.forEach(o => {
+        data[o.furnitureType] = {
+            left: Math.round(o.left), top: Math.round(o.top),
+            scaleX: +o.scaleX.toFixed(4), scaleY: +o.scaleY.toFixed(4),
+        };
+    });
+    console.log(JSON.stringify(data, null, 2));
+    alert('已输出到控制台 (F12)，复制给我');
+}
+</script>
+
 <div id="scene-overlay" onclick="this.classList.remove('show')">
     <button id="scene-close" onclick="document.getElementById('scene-overlay').classList.remove('show')">&times;</button>
     <img src="dressup_scene.jpg" alt="换装场景" onclick="event.stopPropagation()">
