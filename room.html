@@ -306,17 +306,16 @@ function init() {
     });
 
     // 换装图标（墙壁上）
-    const savedDressup = JSON.parse(localStorage.getItem('dressup_state') || 'null');
     const dressupW = W * 0.22;
     const dressupImg = new Image();
     dressupImg.onload = function() {
         const ratio = dressupW / dressupImg.width;
         const dressupH = dressupImg.height * ratio;
         const fImg = new fabric.Image(dressupImg, {
-            left: savedDressup ? savedDressup.left : W * 0.18,
-            top:  savedDressup ? savedDressup.top  : CEILING_H + WALL_H * 0.15,
-            scaleX: savedDressup ? savedDressup.scaleX : ratio,
-            scaleY: savedDressup ? savedDressup.scaleY : ratio,
+            left: W * 0.18,
+            top: CEILING_H + WALL_H * 0.15,
+            scaleX: ratio,
+            scaleY: ratio,
             angle: 0,
             furnitureType: '换装图标',
             hasControls: false, hasBorders: false, selectable: false, lockMovementX: true, lockMovementY: true, lockRotation: false,
@@ -400,17 +399,16 @@ function loadFurniture(W, H) {
     const items = [];
 
     // 沙发（靠墙居中，透明底）
-    const saved = JSON.parse(localStorage.getItem('sofa_state') || 'null');
     const sofaW = W * 0.55;
     const sofaImg = new Image();
     sofaImg.onload = function() {
         const ratio = sofaW / sofaImg.width;
         const sofaH = sofaImg.height * ratio;
         const fImg = new fabric.Image(sofaImg, {
-            left: saved ? saved.left : (W - sofaW) / 2,
-            top:  saved ? saved.top  : floorY - sofaH + 10,
-            scaleX: saved ? saved.scaleX : ratio,
-            scaleY: saved ? saved.scaleY : ratio,
+            left: (W - sofaW) / 2,
+            top: floorY - sofaH + 10,
+            scaleX: ratio,
+            scaleY: ratio,
             angle: 0,
             furnitureType: '沙发',
             hasControls: false, hasBorders: false, selectable: false, lockMovementX: true, lockMovementY: true,
@@ -422,17 +420,16 @@ function loadFurniture(W, H) {
     sofaImg.src = 'sofa_no_bg.png';
 
     // 桌子（地板右侧）
-    const savedTable = JSON.parse(localStorage.getItem('table_state') || 'null');
     const tblW = W * 0.35;
     const tblImg = new Image();
     tblImg.onload = function() {
         const ratio = tblW / tblImg.width;
         const tblH = tblImg.height * ratio;
         const fImg = new fabric.Image(tblImg, {
-            left: savedTable ? savedTable.left : W * 0.60,
-            top:  savedTable ? savedTable.top  : floorY - tblH + 10,
-            scaleX: savedTable ? savedTable.scaleX : ratio,
-            scaleY: savedTable ? savedTable.scaleY : ratio,
+            left: W * 0.60,
+            top: floorY - tblH + 10,
+            scaleX: ratio,
+            scaleY: ratio,
             angle: 0,
             furnitureType: '桌子',
             hasControls: false, hasBorders: false, selectable: false, lockMovementX: true, lockMovementY: true,
@@ -444,17 +441,16 @@ function loadFurniture(W, H) {
     tblImg.src = 'table_yellow_no_bg.png';
 
     // 落地灯（地板左侧）
-    const savedLamp = JSON.parse(localStorage.getItem('lamp_state') || 'null');
     const lampW = W * 0.25;
     const lampImg = new Image();
     lampImg.onload = function() {
         const ratio = lampW / lampImg.width;
         const lampH = lampImg.height * ratio;
         const fImg = new fabric.Image(lampImg, {
-            left: savedLamp ? savedLamp.left : W * 0.08,
-            top:  savedLamp ? savedLamp.top  : floorY - lampH + 10,
-            scaleX: savedLamp ? savedLamp.scaleX : ratio,
-            scaleY: savedLamp ? savedLamp.scaleY : ratio,
+            left: W * 0.08,
+            top: floorY - lampH + 10,
+            scaleX: ratio,
+            scaleY: ratio,
             angle: 0,
             furnitureType: '落地灯',
             hasControls: false, hasBorders: false, selectable: false, lockMovementX: true, lockMovementY: true,
@@ -466,17 +462,16 @@ function loadFurniture(W, H) {
     lampImg.src = 'lamp_no_bg.png';
 
     // 粉色坐垫（地板中央偏下）
-    const savedCushion = JSON.parse(localStorage.getItem('cushion_state') || 'null');
     const cushionW = W * 0.25;
     const cushionImg = new Image();
     cushionImg.onload = function() {
         const ratio = cushionW / cushionImg.width;
         const cushionH = cushionImg.height * ratio;
         const fImg = new fabric.Image(cushionImg, {
-            left: savedCushion ? savedCushion.left : W * 0.42,
-            top:  savedCushion ? savedCushion.top  : floorY + FLOOR_H * 0.20,
-            scaleX: savedCushion ? savedCushion.scaleX : ratio,
-            scaleY: savedCushion ? savedCushion.scaleY : ratio,
+            left: W * 0.42,
+            top: floorY + FLOOR_H * 0.20,
+            scaleX: ratio,
+            scaleY: ratio,
             angle: 0,
             furnitureType: '坐垫',
             hasControls: false, hasBorders: false, selectable: false, lockMovementX: true, lockMovementY: true,
@@ -488,17 +483,16 @@ function loadFurniture(W, H) {
     cushionImg.src = 'cushion_pink_no_bg.png';
 
     // 换装图标（墙壁上）
-    const savedDressup = JSON.parse(localStorage.getItem('dressup_state') || 'null');
     const dressupW = W * 0.15;
     const dressupImg2 = new Image();
     dressupImg2.onload = function() {
         const ratio = dressupW / dressupImg2.width;
         const dressupH2 = dressupImg2.height * ratio;
         const fImg = new fabric.Image(dressupImg2, {
-            left: savedDressup ? savedDressup.left : W * 0.18,
-            top:  savedDressup ? savedDressup.top  : CEILING_H + WALL_H * 0.15,
-            scaleX: savedDressup ? savedDressup.scaleX : ratio,
-            scaleY: savedDressup ? savedDressup.scaleY : ratio,
+            left: W * 0.18,
+            top: CEILING_H + WALL_H * 0.15,
+            scaleX: ratio,
+            scaleY: ratio,
             angle: 0,
             furnitureType: '换装图标',
             hasControls: false, hasBorders: false, selectable: false, lockMovementX: true, lockMovementY: true, lockRotation: false,
@@ -509,17 +503,16 @@ function loadFurniture(W, H) {
     dressupImg2.src = 'dressup_icon_no_bg.png';
 
     // 房子图标（墙壁左上）
-    const savedHouse = JSON.parse(localStorage.getItem('house_state') || 'null');
     const houseW = W * 0.15;
     const houseImg = new Image();
     houseImg.onload = function() {
         const ratio = houseW / houseImg.width;
         const houseH = houseImg.height * ratio;
         const fImg = new fabric.Image(houseImg, {
-            left: savedHouse ? savedHouse.left : W * 0.25,
-            top:  savedHouse ? savedHouse.top  : CEILING_H + WALL_H * 0.15,
-            scaleX: savedHouse ? savedHouse.scaleX : ratio,
-            scaleY: savedHouse ? savedHouse.scaleY : ratio,
+            left: W * 0.25,
+            top: CEILING_H + WALL_H * 0.15,
+            scaleX: ratio,
+            scaleY: ratio,
             angle: 0,
             furnitureType: '房子图标',
             hasControls: false, hasBorders: false, selectable: false, lockMovementX: true, lockMovementY: true, lockRotation: true,
@@ -530,17 +523,16 @@ function loadFurniture(W, H) {
     houseImg.src = 'house_icon_no_bg.png';
 
     // 公告栏（墙壁上）
-    const savedBoard = JSON.parse(localStorage.getItem('board_state') || 'null');
     const boardW = W * 0.20;
     const boardImg = new Image();
     boardImg.onload = function() {
         const ratio = boardW / boardImg.width;
         const boardH = boardImg.height * ratio;
         const fImg = new fabric.Image(boardImg, {
-            left: savedBoard ? savedBoard.left : W * 0.55,
-            top:  savedBoard ? savedBoard.top  : CEILING_H + WALL_H * 0.25,
-            scaleX: savedBoard ? savedBoard.scaleX : ratio,
-            scaleY: savedBoard ? savedBoard.scaleY : ratio,
+            left: W * 0.55,
+            top: CEILING_H + WALL_H * 0.25,
+            scaleX: ratio,
+            scaleY: ratio,
             angle: 0,
             furnitureType: '公告栏',
             hasControls: false, hasBorders: false, selectable: false, lockMovementX: true, lockMovementY: true,
@@ -572,17 +564,16 @@ function loadFurniture(W, H) {
     boardImg.src = 'board_no_bg.png';
 
     // 盆栽（地板左侧）
-    const savedPlant = JSON.parse(localStorage.getItem('plant_state') || 'null');
     const plantW = W * 0.15;
     const plantImg = new Image();
     plantImg.onload = function() {
         const ratio = plantW / plantImg.width;
         const plantH = plantImg.height * ratio;
         const fImg = new fabric.Image(plantImg, {
-            left: savedPlant ? savedPlant.left : W * 0.03,
-            top:  savedPlant ? savedPlant.top  : floorY - plantH + 10,
-            scaleX: savedPlant ? savedPlant.scaleX : ratio,
-            scaleY: savedPlant ? savedPlant.scaleY : ratio,
+            left: W * 0.03,
+            top: floorY - plantH + 10,
+            scaleX: ratio,
+            scaleY: ratio,
             angle: 0,
             furnitureType: '盆栽',
             hasControls: false, hasBorders: false, selectable: false, lockMovementX: true, lockMovementY: true,
@@ -594,17 +585,16 @@ function loadFurniture(W, H) {
     plantImg.src = 'plant_pot_no_bg.png';
 
     // 书架（地板右侧靠墙）
-    const savedShelf = JSON.parse(localStorage.getItem('shelf_state') || 'null');
     const shelfW = W * 0.20;
     const shelfImg = new Image();
     shelfImg.onload = function() {
         const ratio = shelfW / shelfImg.width;
         const shelfH = shelfImg.height * ratio;
         const fImg = new fabric.Image(shelfImg, {
-            left: savedShelf ? savedShelf.left : W * 0.76,
-            top:  savedShelf ? savedShelf.top  : floorY - shelfH + 10,
-            scaleX: savedShelf ? savedShelf.scaleX : ratio,
-            scaleY: savedShelf ? savedShelf.scaleY : ratio,
+            left: W * 0.76,
+            top: floorY - shelfH + 10,
+            scaleX: ratio,
+            scaleY: ratio,
             angle: 0,
             furnitureType: '书架',
             hasControls: false, hasBorders: false, selectable: false, lockMovementX: true, lockMovementY: true,
@@ -741,7 +731,6 @@ function loadFurniture(W, H) {
     }
 
     // 初始化宠物 DOM
-    const savedPet = JSON.parse(localStorage.getItem('pet_state') || 'null');
     petW = W * 0.20;
     const petImgEl = new Image();
     petImgEl.onload = function() {
@@ -750,8 +739,8 @@ function loadFurniture(W, H) {
         petBox.style.width = petW + 'px';
         petBox.style.height = petH + 'px';
 
-        const startX = savedPet ? savedPet.left : W * 0.38;
-        const startY = savedPet ? savedPet.top  : floorY + FLOOR_H * 0.30;
+        const startX = W * 0.38;
+        const startY = floorY + FLOOR_H * 0.30;
         const sp = canvasToScreen(startX, startY);
         petBox.style.left = sp.x + 'px';
         petBox.style.top = sp.y + 'px';
@@ -760,18 +749,6 @@ function loadFurniture(W, H) {
         startPetAI(floorY, FLOOR_H, W, H);
     };
     petImgEl.src = 'pet_no_bg.png';
-
-    // 自动保存：每次调整后存入 localStorage
-    canvas.on('object:modified', function(e) {
-        const obj = e.target;
-        if (!obj || !obj.furnitureType) return;
-        const keyMap = { '沙发': 'sofa_state', '桌子': 'table_state', '落地灯': 'lamp_state', '坐垫': 'cushion_state', '公告栏': 'board_state', '盆栽': 'plant_state', '书架': 'shelf_state', '宠物': 'pet_state', '房子图标': 'house_state', '换装图标': 'dressup_state' };
-        const key = keyMap[obj.furnitureType];
-        if (key) localStorage.setItem(key, JSON.stringify({
-            left: obj.left, top: obj.top,
-            scaleX: obj.scaleX, scaleY: obj.scaleY,
-        }));
-    });
 
     items.forEach(item => {
         fabric.Image.fromURL(item.src, (img) => {
