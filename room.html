@@ -1342,21 +1342,6 @@ function sharePet(platform) {
 }
 </script>
 
-<button onclick="dumpPositions()" style="position:fixed;bottom:80px;right:12px;z-index:2000;background:#333;color:#fff;border:none;border-radius:12px;padding:8px 14px;font-size:13px;cursor:pointer;font-family:Microsoft YaHei;">导出位置</button>
-<script>
-function dumpPositions() {
-    const objs = canvas.getObjects().filter(o => o.furnitureType);
-    const data = {};
-    objs.forEach(o => {
-        data[o.furnitureType] = {
-            left: Math.round(o.left), top: Math.round(o.top),
-            scaleX: +o.scaleX.toFixed(4), scaleY: +o.scaleY.toFixed(4),
-        };
-    });
-    console.log(JSON.stringify(data, null, 2));
-    alert('已输出到控制台 (F12)，复制给我');
-}
-</script>
 
 <div id="scene-overlay" onclick="this.classList.remove('show')">
     <button id="scene-close" onclick="document.getElementById('scene-overlay').classList.remove('show')">&times;</button>
