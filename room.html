@@ -1,0 +1,1396 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>房间视图</title>
+<script src="fabric.min.js"></script>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+html, body { width:100%; height:100%; overflow:hidden; background:#1a1a2e; }
+canvas { display:block; }
+
+/* === 顶部状态栏 === */
+#top-bar {
+    position: fixed; top: 16px; left: 20px; z-index: 900;
+    display: flex; align-items: center; gap: 12px;
+    background: rgba(255,255,255,0.75); backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(255,255,255,0.5);
+    border-radius: 28px; padding: 6px 18px 6px 6px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+    font-family: 'Microsoft YaHei', sans-serif;
+    cursor: grab; user-select: none;
+}
+#top-bar:active { cursor: grabbing; }
+#top-bar .avatar {
+    width: 40px; height: 40px; border-radius: 50%; overflow: hidden;
+    border: 2px solid rgba(255,255,255,0.8);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1); flex-shrink: 0;
+    background: #fdfbf9;
+}
+#top-bar .avatar img { width:100%; height:100%; object-fit:cover; }
+#top-bar .coins {
+    display: flex; align-items: center; gap: 6px;
+}
+#top-bar .coin-icon {
+    width: 28px; height: 28px; border-radius: 50%;
+    background: linear-gradient(135deg, #ffc439, #f59e0b);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px; box-shadow: inset 0 1px 2px rgba(255,255,255,0.3);
+}
+#top-bar .coin-amount {
+    font-size: 16px; font-weight: 800; color: #333;
+}
+
+/* === 游戏弹窗 === */
+#game-overlay {
+    position: fixed; inset: 0; z-index: 10000; background: rgba(0,0,0,0.9);
+    display: flex; align-items: center; justify-content: center;
+    opacity: 0; pointer-events: none; transition: opacity 0.3s;
+}
+#game-overlay.show { opacity: 1; pointer-events: auto; }
+#game-close {
+    position: absolute; top: 16px; right: 24px; z-index: 10;
+    color: #fff; font-size: 36px; cursor: pointer; background: none; border: none;
+    opacity: 0.7; transition: opacity 0.2s;
+}
+#game-close:hover { opacity: 1; }
+#game-canvas { background:#f7f7f7; border-radius:8px; box-shadow:0 8px 40px rgba(0,0,0,0.3); }
+
+/* === 底部操作栏 === */
+#action-bar {
+    position: fixed; bottom: 0; left: 0; right: 0; z-index: 800;
+    display: flex; align-items: center; justify-content: center; gap: 24px;
+    padding-bottom: 18px;
+    pointer-events: none;
+}
+.action-btn {
+    width: 56px; height: 56px; border-radius: 50%;
+    border: none; cursor: pointer; pointer-events: auto;
+    font-size: 28px; display: flex; align-items: center; justify-content: center;
+    background: rgba(255,255,255,0.85); backdrop-filter: blur(8px);
+    box-shadow: 0 2px 16px rgba(0,0,0,0.1);
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+.action-btn:hover { transform: scale(1.12); box-shadow: 0 4px 24px rgba(0,0,0,0.18); }
+.action-btn:active { transform: scale(0.95); }
+
+/* === 宠物 === */
+#pet-box {
+    position: fixed; z-index: 1000; pointer-events: auto; cursor: pointer;
+    visibility: hidden;
+    transition: left 1.5s cubic-bezier(0.25, 0.1, 0.25, 1),
+                top 1.5s cubic-bezier(0.25, 0.1, 0.25, 1);
+    animation: pet-breathe 2.5s ease-in-out infinite;
+}
+#pet-box.flip { transform: scaleX(-1); }
+#pet-img { display: block; width: 100%; height: 100%; object-fit: contain; }
+#pet-icon {
+    position: absolute; top: -28px; left: 50%; transform: translateX(-50%);
+    font-size: 20px; pointer-events: none; line-height: 1;
+    animation: icon-float 1.8s ease-in-out infinite;
+}
+
+/* 呼吸 */
+@keyframes pet-breathe {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.04); }
+}
+#pet-box.flip { animation: pet-breathe-flip 2.5s ease-in-out infinite; }
+@keyframes pet-breathe-flip {
+    0%, 100% { transform: scaleX(-1) scale(1); }
+    50% { transform: scaleX(-1) scale(1.04); }
+}
+
+/* 眨眼 */
+@keyframes pet-blink {
+    0%, 45%, 55%, 100% { transform: scaleY(1); }
+    48%, 52% { transform: scaleY(0.05); }
+}
+#pet-img.blinking { animation: pet-blink 0.2s ease-in-out; }
+
+/* 图标浮动 */
+@keyframes icon-float {
+    0%, 100% { transform: translateX(-50%) translateY(0); }
+    50% { transform: translateX(-50%) translateY(-4px); }
+}
+
+/* 睡觉 */
+#pet-box.sleeping { animation: pet-sleep 4s ease-in-out infinite; }
+@keyframes pet-sleep {
+    0%, 100% { transform: scale(0.85, 0.72); filter: brightness(0.9); }
+    50% { transform: scale(0.87, 0.73); filter: brightness(0.88); }
+}
+#pet-box.sleeping.flip { animation: pet-sleep-flip 4s ease-in-out infinite; }
+@keyframes pet-sleep-flip {
+    0%, 100% { transform: scaleX(-1) scale(0.85, 0.72); filter: brightness(0.9); }
+    50% { transform: scaleX(-1) scale(0.87, 0.73); filter: brightness(0.88); }
+}
+
+/* 运动 */
+#pet-box.exercise { animation: pet-bounce 0.5s ease-in-out infinite; }
+@keyframes pet-bounce {
+    0%, 100% { transform: translateY(0) scale(1); }
+    30% { transform: translateY(-8px) scale(1.05); }
+    60% { transform: translateY(-2px) scale(1.02); }
+}
+#pet-box.exercise.flip { animation: pet-bounce-flip 0.5s ease-in-out infinite; }
+@keyframes pet-bounce-flip {
+    0%, 100% { transform: scaleX(-1) translateY(0) scale(1); }
+    30% { transform: scaleX(-1) translateY(-8px) scale(1.05); }
+    60% { transform: scaleX(-1) translateY(-2px) scale(1.02); }
+}
+
+/* 脏了 */
+#pet-box.dirty { filter: sepia(0.3) brightness(0.85); animation: pet-shiver 0.3s ease-in-out infinite; }
+#pet-box.dirty.flip { animation: pet-shiver-flip 0.3s ease-in-out infinite; }
+@keyframes pet-shiver {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-2px); }
+    75% { transform: translateX(2px); }
+}
+@keyframes pet-shiver-flip {
+    0%, 100% { transform: scaleX(-1) translateX(0); }
+    25% { transform: scaleX(-1) translateX(-2px); }
+    75% { transform: scaleX(-1) translateX(2px); }
+}
+
+/* === 任务弹窗 === */
+#tasks-overlay {
+    position: fixed; inset: 0; z-index: 9998; background: rgba(0,0,0,0.7);
+    backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+    display: flex; align-items: center; justify-content: center;
+    opacity: 0; pointer-events: none; transition: opacity 0.3s;
+}
+#tasks-overlay.show { opacity: 1; pointer-events: auto; }
+#tasks-card {
+    background: #fdfbf9; width: 90%; max-width: 420px; max-height: 75vh;
+    border-radius: 24px; box-shadow: 0 8px 40px rgba(0,0,0,0.2);
+    transform: scale(0.9) translateY(20px); transition: transform 0.3s;
+    display: flex; flex-direction: column; overflow: hidden;
+}
+#tasks-overlay.show #tasks-card { transform: scale(1) translateY(0); }
+#tasks-header {
+    padding: 18px 24px; border-bottom: 1px solid #eee;
+    display: flex; justify-content: space-between; align-items: center;
+    font-family: 'Microsoft YaHei', sans-serif;
+}
+#tasks-header h2 { font-size: 18px; color: #333; display: flex; align-items: center; gap: 8px; }
+#tasks-close {
+    width: 32px; height: 32px; border-radius: 50%; border: none; cursor: pointer;
+    background: #f0f0f0; color: #666; font-size: 18px; display: flex;
+    align-items: center; justify-content: center; transition: all 0.2s;
+}
+#tasks-close:hover { background: #ddd; color: #333; }
+#tasks-list { padding: 20px 24px; overflow-y: auto; font-family: 'Microsoft YaHei', sans-serif; }
+#tasks-list .section-title {
+    font-size: 11px; font-weight: bold; color: #999; text-transform: uppercase;
+    letter-spacing: 1px; margin: 16px 0 10px;
+}
+#tasks-list .section-title:first-child { margin-top: 0; }
+.task-item {
+    background: #fff; border: 1px solid #eee; border-radius: 16px;
+    padding: 14px 16px; margin-bottom: 10px; display: flex;
+    align-items: center; justify-content: space-between; gap: 12px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+}
+.task-icon {
+    width: 40px; height: 40px; border-radius: 12px; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center; font-size: 20px;
+}
+.task-info { flex: 1; min-width: 0; }
+.task-name { font-size: 14px; font-weight: bold; color: #333; }
+.task-desc { font-size: 11px; color: #999; margin-top: 2px; }
+.task-btn {
+    border: none; border-radius: 20px; padding: 8px 16px; font-size: 12px;
+    font-weight: bold; cursor: pointer; transition: all 0.2s; white-space: nowrap;
+    font-family: 'Microsoft YaHei', sans-serif; flex-shrink: 0;
+}
+.task-btn.claim { background: #1e1e2d; color: #fff; }
+.task-btn.claim:hover { background: #333; }
+.task-btn.claimed { background: #e8e8e8; color: #999; pointer-events: none; }
+.task-btn.go { background: #d9c5b2; color: #333; }
+.task-btn.go:hover { background: #c4a882; }
+.task-btn.share { background: #ff6b6b; color: #fff; }
+.task-btn.share:hover { background: #ee5a5a; }
+.task-btn.timer { background: #4d96ff; color: #fff; pointer-events: none; }
+
+/* === 场景弹窗 === */
+#scene-overlay {
+    position: fixed; inset: 0; z-index: 9999; background: rgba(0,0,0,0.85);
+    display: flex; align-items: center; justify-content: center;
+    opacity: 0; pointer-events: none; transition: opacity 0.3s;
+}
+#scene-overlay.show { opacity: 1; pointer-events: auto; }
+#scene-overlay img { max-width: 95vw; max-height: 95vh; object-fit: contain; border-radius: 12px; }
+#scene-close {
+    position: absolute; top: 20px; right: 30px; color: #fff; font-size: 36px;
+    cursor: pointer; background: none; border: none; line-height: 1;
+}
+
+/* 饿了 */
+#pet-box.hungry { filter: saturate(0.5) brightness(0.9); }
+#pet-box.hungry.flip { filter: saturate(0.5) brightness(0.9); animation: pet-breathe-flip 2.5s ease-in-out infinite; }
+
+</style>
+</head>
+<body>
+
+<canvas id="roomCanvas"></canvas>
+<div id="top-bar">
+    <div class="avatar"><img src="pet_no_bg.png" alt="pet"></div>
+    <div class="coins">
+        <div class="coin-icon">🪙</div>
+        <span class="coin-amount" id="coin-count">200</span>
+    </div>
+</div>
+<div id="action-bar">
+    <button class="action-btn" onclick="petAction('feed')" title="喂食">🥩</button>
+    <button class="action-btn" onclick="petAction('pet')" title="抚摸">✋</button>
+    <button class="action-btn" onclick="petAction('bath')" title="洗澡">🛁</button>
+    <button class="action-btn" onclick="openGame()" title="冒险" style="background:linear-gradient(135deg,#1e1e2d,#2d2d42);color:#fff;">⚔️</button>
+</div>
+<div id="game-overlay">
+    <button id="game-close" onclick="closeGame()">✕</button>
+    <canvas id="game-canvas"></canvas>
+</div>
+<div id="pet-box">
+    <span id="pet-icon">😊</span>
+    <img id="pet-img" src="pet_no_bg.png" alt="pet" draggable="false">
+</div>
+
+<script>
+// ============================================================
+//  全屏房间视图 — 地板60% / 墙壁28% / 天花板12%
+// ============================================================
+
+let canvas;
+const bgElements = [];      // 背景元素引用，resize 时清理
+const furnitureData = [];   // 家具加载信息
+let petMoveTimer = null, petStateTimer = null, petBlinkTimer = null;
+let petCurrentState = 'normal', petFacingRight = true;
+
+function init() {
+    const W = window.innerWidth;
+    const H = window.innerHeight;
+
+    canvas = new fabric.Canvas('roomCanvas', {
+        width: W, height: H,
+        backgroundColor: '#1a1a2e',
+        selection: true,
+        preserveObjectStacking: true,
+    });
+
+    buildBackground(W, H);
+    loadFurniture(W, H);
+
+    // 房子图标点击跳转
+    canvas.on('mouse:down', function(e) {
+        if (e.target) e.target._startPos = { left: e.target.left, top: e.target.top };
+    });
+    canvas.on('mouse:up', function(e) {
+        if (!e.target) return;
+        const moved = e.target._startPos &&
+            (Math.abs(e.target.left - e.target._startPos.left) > 3 ||
+             Math.abs(e.target.top - e.target._startPos.top) > 3);
+        if (!moved && e.target.furnitureType === '房子图标') {
+            window.open('https://www.pawlorful.shop', '_blank');
+        }
+        if (!moved && e.target.furnitureType === '公告栏') {
+            document.getElementById('tasks-overlay').classList.add('show');
+        }
+        if (!moved && e.target.furnitureType === '换装图标') {
+            document.getElementById('scene-overlay').classList.add('show');
+        }
+    });
+
+    // 换装图标（墙壁上）
+    const savedDressup = JSON.parse(localStorage.getItem('dressup_state') || 'null');
+    const dressupW = W * 0.22;
+    const dressupImg = new Image();
+    dressupImg.onload = function() {
+        const ratio = dressupW / dressupImg.width;
+        const dressupH = dressupImg.height * ratio;
+        const fImg = new fabric.Image(dressupImg, {
+            left: savedDressup ? savedDressup.left : W * 0.18,
+            top:  savedDressup ? savedDressup.top  : CEILING_H + WALL_H * 0.15,
+            scaleX: savedDressup ? savedDressup.scaleX : ratio,
+            scaleY: savedDressup ? savedDressup.scaleY : ratio,
+            angle: 0,
+            furnitureType: '换装图标',
+            hasControls: true, hasBorders: true, selectable: true, lockRotation: false,
+        });
+        canvas.add(fImg);
+        canvas.renderAll();
+    };
+    dressupImg.onerror = function() { console.error('换装图标加载失败'); };
+    dressupImg.src = 'dressup_icon_no_bg.png';
+
+
+
+    // Delete 键删除
+    document.addEventListener('keydown', (e) => {
+        if ((e.key === 'Delete' || e.key === 'Backspace') && document.activeElement?.tagName !== 'INPUT') {
+            const obj = canvas.getActiveObject();
+            if (obj && obj.furnitureType && obj.furnitureType !== '宠物') {
+                canvas.remove(obj);
+                canvas.discardActiveObject();
+                canvas.renderAll();
+            }
+        }
+    });
+
+    window.addEventListener('resize', () => rebuild());
+}
+
+function buildBackground(W, H) {
+    const CEILING_H = Math.round(H * 0.12);
+    const WALL_H    = Math.round(H * 0.33);
+    const FLOOR_H   = H - CEILING_H - WALL_H;
+    const floorY    = CEILING_H + WALL_H;
+
+    function bg(obj) { bgElements.push(obj); canvas.add(obj); return obj; }
+
+    // 天花板
+    bg(new fabric.Rect({ left:0, top:0, width:W, height:CEILING_H, fill:'#f5f0e6', selectable:false, evented:false }));
+
+    // 分隔线
+    bg(new fabric.Rect({ left:0, top:CEILING_H-4, width:W, height:4, fill:'#b0ada5', selectable:false, evented:false }));
+
+    // 墙壁
+    bg(new fabric.Rect({ left:0, top:CEILING_H, width:W, height:WALL_H, fill:'#faf3e0', selectable:false, evented:false }));
+
+    // 踢脚线
+    bg(new fabric.Rect({ left:0, top:floorY-8, width:W, height:8, fill:'#d5cfc4', selectable:false, evented:false }));
+
+    // 地板
+    bg(new fabric.Rect({ left:0, top:floorY, width:W, height:FLOOR_H, fill:'#c8a87c', selectable:false, evented:false }));
+
+    // 木纹线
+    for (let i = 1; i < 10; i++) {
+        bg(new fabric.Rect({ left:0, top:floorY + i*(FLOOR_H/10), width:W, height:1, fill:'rgba(160,130,90,0.25)', selectable:false, evented:false }));
+    }
+
+    // 地板阴影
+    bg(new fabric.Rect({ left:0, top:floorY, width:W, height:Math.max(20, FLOOR_H*0.05), fill:'rgba(0,0,0,0.06)', selectable:false, evented:false }));
+
+    // 底部白色填充圆弧
+    const arcH = H * 0.17;
+    bg(new fabric.Path(`M 0 ${H} Q ${W/2} ${H - arcH} ${W} ${H} L 0 ${H} Z`, {
+        fill: '#ffffff', stroke: null,
+        selectable: false, evented: false,
+    }));
+
+    canvas.renderAll();
+    return { floorY, CEILING_H, WALL_H, FLOOR_H };
+}
+
+function loadFurniture(W, H) {
+    const CEILING_H = Math.round(H * 0.12);
+    const WALL_H    = Math.round(H * 0.33);
+    const FLOOR_H   = H - CEILING_H - WALL_H;
+    const floorY    = CEILING_H + WALL_H;
+
+    // 清除旧家具
+    const objs = canvas.getObjects().filter(o => o.furnitureType);
+    objs.forEach(o => canvas.remove(o));
+
+    // 家具
+    const items = [];
+
+    // 沙发（靠墙居中，透明底）
+    const saved = JSON.parse(localStorage.getItem('sofa_state') || 'null');
+    const sofaW = W * 0.55;
+    const sofaImg = new Image();
+    sofaImg.onload = function() {
+        const ratio = sofaW / sofaImg.width;
+        const sofaH = sofaImg.height * ratio;
+        const fImg = new fabric.Image(sofaImg, {
+            left: saved ? saved.left : (W - sofaW) / 2,
+            top:  saved ? saved.top  : floorY - sofaH + 10,
+            scaleX: saved ? saved.scaleX : ratio,
+            scaleY: saved ? saved.scaleY : ratio,
+            angle: 0,
+            furnitureType: '沙发',
+            hasControls: true, hasBorders: true, selectable: true,
+            lockRotation: false,
+        });
+        canvas.add(fImg);
+        canvas.renderAll();
+    };
+    sofaImg.src = 'sofa_no_bg.png';
+
+    // 桌子（地板右侧）
+    const savedTable = JSON.parse(localStorage.getItem('table_state') || 'null');
+    const tblW = W * 0.35;
+    const tblImg = new Image();
+    tblImg.onload = function() {
+        const ratio = tblW / tblImg.width;
+        const tblH = tblImg.height * ratio;
+        const fImg = new fabric.Image(tblImg, {
+            left: savedTable ? savedTable.left : W * 0.60,
+            top:  savedTable ? savedTable.top  : floorY - tblH + 10,
+            scaleX: savedTable ? savedTable.scaleX : ratio,
+            scaleY: savedTable ? savedTable.scaleY : ratio,
+            angle: 0,
+            furnitureType: '桌子',
+            hasControls: true, hasBorders: true, selectable: true,
+            lockRotation: false,
+        });
+        canvas.add(fImg);
+        canvas.renderAll();
+    };
+    tblImg.src = 'table_yellow_no_bg.png';
+
+    // 落地灯（地板左侧）
+    const savedLamp = JSON.parse(localStorage.getItem('lamp_state') || 'null');
+    const lampW = W * 0.25;
+    const lampImg = new Image();
+    lampImg.onload = function() {
+        const ratio = lampW / lampImg.width;
+        const lampH = lampImg.height * ratio;
+        const fImg = new fabric.Image(lampImg, {
+            left: savedLamp ? savedLamp.left : W * 0.08,
+            top:  savedLamp ? savedLamp.top  : floorY - lampH + 10,
+            scaleX: savedLamp ? savedLamp.scaleX : ratio,
+            scaleY: savedLamp ? savedLamp.scaleY : ratio,
+            angle: 0,
+            furnitureType: '落地灯',
+            hasControls: true, hasBorders: true, selectable: true,
+            lockRotation: false,
+        });
+        canvas.add(fImg);
+        canvas.renderAll();
+    };
+    lampImg.src = 'lamp_no_bg.png';
+
+    // 粉色坐垫（地板中央偏下）
+    const savedCushion = JSON.parse(localStorage.getItem('cushion_state') || 'null');
+    const cushionW = W * 0.25;
+    const cushionImg = new Image();
+    cushionImg.onload = function() {
+        const ratio = cushionW / cushionImg.width;
+        const cushionH = cushionImg.height * ratio;
+        const fImg = new fabric.Image(cushionImg, {
+            left: savedCushion ? savedCushion.left : W * 0.42,
+            top:  savedCushion ? savedCushion.top  : floorY + FLOOR_H * 0.20,
+            scaleX: savedCushion ? savedCushion.scaleX : ratio,
+            scaleY: savedCushion ? savedCushion.scaleY : ratio,
+            angle: 0,
+            furnitureType: '坐垫',
+            hasControls: true, hasBorders: true, selectable: true,
+            lockRotation: false,
+        });
+        canvas.add(fImg);
+        canvas.renderAll();
+    };
+    cushionImg.src = 'cushion_pink_no_bg.png';
+
+    // 换装图标（墙壁上）
+    const savedDressup = JSON.parse(localStorage.getItem('dressup_state') || 'null');
+    const dressupW = W * 0.15;
+    const dressupImg2 = new Image();
+    dressupImg2.onload = function() {
+        const ratio = dressupW / dressupImg2.width;
+        const dressupH2 = dressupImg2.height * ratio;
+        const fImg = new fabric.Image(dressupImg2, {
+            left: savedDressup ? savedDressup.left : W * 0.18,
+            top:  savedDressup ? savedDressup.top  : CEILING_H + WALL_H * 0.15,
+            scaleX: savedDressup ? savedDressup.scaleX : ratio,
+            scaleY: savedDressup ? savedDressup.scaleY : ratio,
+            angle: 0,
+            furnitureType: '换装图标',
+            hasControls: true, hasBorders: true, selectable: true, lockRotation: false,
+        });
+        canvas.add(fImg);
+        canvas.renderAll();
+    };
+    dressupImg2.src = 'dressup_icon_no_bg.png';
+
+    // 房子图标（墙壁左上）
+    const savedHouse = JSON.parse(localStorage.getItem('house_state') || 'null');
+    const houseW = W * 0.15;
+    const houseImg = new Image();
+    houseImg.onload = function() {
+        const ratio = houseW / houseImg.width;
+        const houseH = houseImg.height * ratio;
+        const fImg = new fabric.Image(houseImg, {
+            left: savedHouse ? savedHouse.left : W * 0.25,
+            top:  savedHouse ? savedHouse.top  : CEILING_H + WALL_H * 0.15,
+            scaleX: savedHouse ? savedHouse.scaleX : ratio,
+            scaleY: savedHouse ? savedHouse.scaleY : ratio,
+            angle: 0,
+            furnitureType: '房子图标',
+            hasControls: true, hasBorders: true, selectable: true, lockRotation: true,
+        });
+        canvas.add(fImg);
+        canvas.renderAll();
+    };
+    houseImg.src = 'house_icon_no_bg.png';
+
+    // 公告栏（墙壁上）
+    const savedBoard = JSON.parse(localStorage.getItem('board_state') || 'null');
+    const boardW = W * 0.20;
+    const boardImg = new Image();
+    boardImg.onload = function() {
+        const ratio = boardW / boardImg.width;
+        const boardH = boardImg.height * ratio;
+        const fImg = new fabric.Image(boardImg, {
+            left: savedBoard ? savedBoard.left : W * 0.55,
+            top:  savedBoard ? savedBoard.top  : CEILING_H + WALL_H * 0.25,
+            scaleX: savedBoard ? savedBoard.scaleX : ratio,
+            scaleY: savedBoard ? savedBoard.scaleY : ratio,
+            angle: 0,
+            furnitureType: '公告栏',
+            hasControls: true, hasBorders: true, selectable: true,
+            lockRotation: false,
+        });
+        canvas.add(fImg);
+
+        // 微微发光 + 呼吸收缩效果
+        let glowPhase = 0;
+        function boardGlow() {
+            if (!fImg || !canvas.getObjects().includes(fImg)) return;
+            glowPhase += 0.02;
+            const glow = 10 + Math.sin(glowPhase) * 6;   // 10~16px 模糊
+            const alpha = 0.4 + Math.sin(glowPhase) * 0.2; // 0.2~0.6 透明度
+            const scale = 1 + Math.sin(glowPhase * 1.3) * 0.015; // ±1.5% 缩放
+            fImg.set({
+                shadow: new fabric.Shadow({ color: `rgba(255,220,150,${alpha})`, blur: glow, offsetX: 0, offsetY: 0 }),
+                scaleX: fImg.scaleX * (scale / (fImg._glowScale || scale)),
+                scaleY: fImg.scaleY * (scale / (fImg._glowScale || scale)),
+            });
+            fImg._glowScale = scale;
+            canvas.renderAll();
+            requestAnimationFrame(boardGlow);
+        }
+        boardGlow();
+
+        canvas.renderAll();
+    };
+    boardImg.src = 'board_no_bg.png';
+
+    // 盆栽（地板左侧）
+    const savedPlant = JSON.parse(localStorage.getItem('plant_state') || 'null');
+    const plantW = W * 0.15;
+    const plantImg = new Image();
+    plantImg.onload = function() {
+        const ratio = plantW / plantImg.width;
+        const plantH = plantImg.height * ratio;
+        const fImg = new fabric.Image(plantImg, {
+            left: savedPlant ? savedPlant.left : W * 0.03,
+            top:  savedPlant ? savedPlant.top  : floorY - plantH + 10,
+            scaleX: savedPlant ? savedPlant.scaleX : ratio,
+            scaleY: savedPlant ? savedPlant.scaleY : ratio,
+            angle: 0,
+            furnitureType: '盆栽',
+            hasControls: true, hasBorders: true, selectable: true,
+            lockRotation: false,
+        });
+        canvas.add(fImg);
+        canvas.renderAll();
+    };
+    plantImg.src = 'plant_pot_no_bg.png';
+
+    // 书架（地板右侧靠墙）
+    const savedShelf = JSON.parse(localStorage.getItem('shelf_state') || 'null');
+    const shelfW = W * 0.20;
+    const shelfImg = new Image();
+    shelfImg.onload = function() {
+        const ratio = shelfW / shelfImg.width;
+        const shelfH = shelfImg.height * ratio;
+        const fImg = new fabric.Image(shelfImg, {
+            left: savedShelf ? savedShelf.left : W * 0.76,
+            top:  savedShelf ? savedShelf.top  : floorY - shelfH + 10,
+            scaleX: savedShelf ? savedShelf.scaleX : ratio,
+            scaleY: savedShelf ? savedShelf.scaleY : ratio,
+            angle: 0,
+            furnitureType: '书架',
+            hasControls: true, hasBorders: true, selectable: true,
+            lockRotation: false,
+        });
+        canvas.add(fImg);
+        canvas.renderAll();
+    };
+    shelfImg.src = 'bookshelf_no_bg.png';
+
+    // ========== 宠物系统 (DOM驱动，CSS动画) ==========
+    const petBox = document.getElementById('pet-box');
+    const petImg = document.getElementById('pet-img');
+    const petIcon = document.getElementById('pet-icon');
+    let petW = 0, petH = 0;
+
+    const PET_STATES = {
+        normal:    { icon: '😊', cls: '' },
+        hungry:    { icon: '🍖', cls: 'hungry' },
+        dirty:     { icon: '🛁', cls: 'dirty' },
+        sleeping:  { icon: '💤', cls: 'sleeping' },
+        exercise:  { icon: '⚽', cls: 'exercise' },
+    };
+
+    function getFurnitureObstacles() {
+        return canvas.getObjects().filter(o =>
+            o.furnitureType && o.furnitureType !== '坐垫'
+        );
+    }
+
+    function canvasToScreen(cx, cy) {
+        const rect = canvas.getElement().getBoundingClientRect();
+        return { x: rect.left + cx, y: rect.top + cy };
+    }
+
+    function screenToCanvas(sx, sy) {
+        const rect = canvas.getElement().getBoundingClientRect();
+        return { x: sx - rect.left, y: sy - rect.top };
+    }
+
+    function checkCollision(cx, cy, cw, ch, obstacles) {
+        for (const obs of obstacles) {
+            const ob = obs.getBoundingRect();
+            if (cx < ob.left + ob.width &&
+                cx + cw > ob.left &&
+                cy < ob.top + ob.height &&
+                cy + ch > ob.top) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    window.setPetState = function(state) {
+        if (!PET_STATES[state]) return;
+        petCurrentState = state;
+        const cfg = PET_STATES[state];
+        petIcon.textContent = cfg.icon;
+        petBox.className = '';
+        if (cfg.cls) petBox.classList.add(cfg.cls);
+        if (petFacingRight) petBox.classList.add('flip');
+    }
+
+    function startPetBlinking() {
+        function blink() {
+            petImg.classList.add('blinking');
+            setTimeout(() => petImg.classList.remove('blinking'), 220);
+            petBlinkTimer = setTimeout(blink, 3000 + Math.random() * 5000);
+        }
+        petBlinkTimer = setTimeout(blink, 2000 + Math.random() * 3000);
+    }
+
+    function startPetAI(floorY, FLOOR_H, W, H) {
+        startPetBlinking();
+
+        // 状态轮换
+        function cycleState() {
+            const states = Object.keys(PET_STATES).filter(s => s !== petCurrentState);
+            const next = states[Math.floor(Math.random() * states.length)];
+            setPetState(next);
+            petStateTimer = setTimeout(cycleState, 15000 + Math.random() * 20000);
+        }
+        petStateTimer = setTimeout(cycleState, 18000 + Math.random() * 15000);
+
+        // 自主移动
+        function wander() {
+            if (petCurrentState === 'sleeping') {
+                petMoveTimer = setTimeout(wander, 2000);
+                return;
+            }
+
+            const obstacles = getFurnitureObstacles();
+            const cpos = screenToCanvas(
+                parseFloat(petBox.style.left) || petBox.offsetLeft,
+                parseFloat(petBox.style.top) || petBox.offsetTop
+            );
+            const maxDist = Math.min(petW * 0.4, 55);
+
+            for (let i = 0; i < 12; i++) {
+                const dx = (Math.random() - 0.5) * maxDist * 2;
+                const dy = (Math.random() - 0.5) * maxDist * 2;
+                const nx = cpos.x + dx;
+                const ny = cpos.y + dy;
+
+                if (nx < 5 || nx + petW > W - 5 || ny < floorY + 5 || ny + petH > floorY + FLOOR_H - 5) continue;
+
+                const padW = petW * 0.15, padH = petH * 0.15;
+                if (!checkCollision(nx + padW, ny + padH, petW - padW*2, petH - padH*2, obstacles)) {
+                    if (dx > 5) { petFacingRight = true; petBox.classList.add('flip'); }
+                    else if (dx < -5) { petFacingRight = false; petBox.classList.remove('flip'); }
+
+                    const sp = canvasToScreen(nx, ny);
+                    petBox.style.left = sp.x + 'px';
+                    petBox.style.top = sp.y + 'px';
+                    break;
+                }
+            }
+
+            const speed = petCurrentState === 'exercise' ? 1500 : 3000;
+            petMoveTimer = setTimeout(wander, speed + Math.random() * 2000);
+        }
+        petMoveTimer = setTimeout(wander, 2000);
+
+        // 点击宠物
+        petBox.addEventListener('click', function(e) {
+            e.stopPropagation();
+            const states = Object.keys(PET_STATES);
+            const idx = states.indexOf(petCurrentState);
+            const next = states[(idx + 1) % states.length];
+            setPetState(next);
+            clearTimeout(petStateTimer);
+            petStateTimer = setTimeout(cycleState, 20000 + Math.random() * 20000);
+        });
+    }
+
+    // 初始化宠物 DOM
+    const savedPet = JSON.parse(localStorage.getItem('pet_state') || 'null');
+    petW = W * 0.20;
+    const petImgEl = new Image();
+    petImgEl.onload = function() {
+        const ratio = petW / petImgEl.width;
+        petH = petImgEl.height * ratio;
+        petBox.style.width = petW + 'px';
+        petBox.style.height = petH + 'px';
+
+        const startX = savedPet ? savedPet.left : W * 0.38;
+        const startY = savedPet ? savedPet.top  : floorY + FLOOR_H * 0.30;
+        const sp = canvasToScreen(startX, startY);
+        petBox.style.left = sp.x + 'px';
+        petBox.style.top = sp.y + 'px';
+        petBox.style.visibility = 'visible';
+
+        startPetAI(floorY, FLOOR_H, W, H);
+    };
+    petImgEl.src = 'pet_no_bg.png';
+
+    // 自动保存：每次调整后存入 localStorage
+    canvas.on('object:modified', function(e) {
+        const obj = e.target;
+        if (!obj || !obj.furnitureType) return;
+        const keyMap = { '沙发': 'sofa_state', '桌子': 'table_state', '落地灯': 'lamp_state', '坐垫': 'cushion_state', '公告栏': 'board_state', '盆栽': 'plant_state', '书架': 'shelf_state', '宠物': 'pet_state', '房子图标': 'house_state', '换装图标': 'dressup_state' };
+        const key = keyMap[obj.furnitureType];
+        if (key) localStorage.setItem(key, JSON.stringify({
+            left: obj.left, top: obj.top,
+            scaleX: obj.scaleX, scaleY: obj.scaleY,
+        }));
+    });
+
+    items.forEach(item => {
+        fabric.Image.fromURL(item.src, (img) => {
+            if (!img) { console.warn('加载失败: ' + item.name); return; }
+            img.set({
+                left: item.x, top: item.y,
+                scaleX: item.scale, scaleY: item.scale,
+                angle: 0,
+                furnitureType: item.name,
+                hasControls: true, hasBorders: true, selectable: true,
+                lockRotation: false,
+            });
+            canvas.add(img);
+            if (item.name === '地毯') img.moveTo(bgElements.length); // 仅次于背景层
+            canvas.renderAll();
+        }, { crossOrigin: 'anonymous' });
+    });
+}
+
+function rebuild() {
+    const W = window.innerWidth;
+    const H = window.innerHeight;
+
+    // 清理宠物系统
+    if (petMoveTimer) clearTimeout(petMoveTimer);
+    if (petStateTimer) clearTimeout(petStateTimer);
+    if (petBlinkTimer) clearTimeout(petBlinkTimer);
+
+    canvas.setWidth(W);
+    canvas.setHeight(H);
+    canvas.backgroundColor = '#1a1a2e';
+
+    // 移除旧背景
+    bgElements.forEach(o => canvas.remove(o));
+    bgElements.length = 0;
+
+    buildBackground(W, H);
+    loadFurniture(W, H);
+}
+
+init();
+</script>
+
+<!-- 任务列表弹窗 -->
+<div id="tasks-overlay" onclick="closeTasks(event)">
+    <div id="tasks-card" onclick="event.stopPropagation()">
+        <div id="tasks-header">
+            <h2>🏆 每日任务</h2>
+            <button id="tasks-close" onclick="document.getElementById('tasks-overlay').classList.remove('show')">✕</button>
+        </div>
+        <div id="tasks-list">
+            <div class="section-title">活动奖励</div>
+            <div class="task-item">
+                <div class="task-icon" style="background:#e3f2fd;">📅</div>
+                <div class="task-info"><div class="task-name">每日签到</div><div class="task-desc">今天来到房间</div></div>
+                <button class="task-btn claim" onclick="claimTask(this, 10)">+10 💰</button>
+            </div>
+            <div class="task-item">
+                <div class="task-icon" style="background:#ede7f6;">⏱️</div>
+                <div class="task-info"><div class="task-name">浏览新品</div><div class="task-desc">停留网站 3 分钟</div></div>
+                <button class="task-btn go" onclick="startBrowse(this)">去逛逛</button>
+            </div>
+            <div class="section-title">社交分享</div>
+            <div class="task-item">
+                <div class="task-icon" style="background:#fce4ec;">🐕</div>
+                <div class="task-info"><div class="task-name">分享你的宠物</div><div class="task-desc">每平台 +50 币</div></div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;">
+                    <button class="task-btn share" onclick="sharePet('TikTok')">TikTok</button>
+                    <button class="task-btn share" style="background:linear-gradient(135deg,#f9ce34,#ee2a7b,#6228d7);" onclick="sharePet('Instagram')">Ins</button>
+                    <button class="task-btn share" style="background:#ff4500;" onclick="sharePet('Reddit')">Reddit</button>
+                    <button class="task-btn share" style="background:#1877f2;" onclick="sharePet('Facebook')">FB</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// ========== 顶部栏拖拽 ==========
+(function() {
+    const bar = document.getElementById('top-bar');
+    let dragging = false, startX, startY, startLeft, startTop;
+    bar.addEventListener('mousedown', function(e) {
+        dragging = true;
+        startX = e.clientX; startY = e.clientY;
+        startLeft = parseInt(bar.style.left) || bar.offsetLeft;
+        startTop = parseInt(bar.style.top) || bar.offsetTop;
+        bar.style.transition = 'none';
+    });
+    window.addEventListener('mousemove', function(e) {
+        if (!dragging) return;
+        bar.style.left = (startLeft + e.clientX - startX) + 'px';
+        bar.style.top = (startTop + e.clientY - startY) + 'px';
+    });
+    window.addEventListener('mouseup', function() {
+        if (dragging) { dragging = false; bar.style.transition = ''; }
+    });
+})();
+
+// ========== Chrome Dino Runner ==========
+let gameLoop = null;
+let gameCvs = null;
+let gameCtx = null;
+let gameW, gameH, gameGY;
+let S;
+let gamePetImg = null;
+
+const DINO_GROUND_Y_OFFSET = 36;
+
+// 预加载宠物图片
+(function() {
+    const img = new Image();
+    img.onload = function() { gamePetImg = img; };
+    img.src = 'game_pet.png';
+})();
+
+function openGame() {
+    document.getElementById("game-overlay").classList.add("show");
+    gameCvs = document.getElementById("game-canvas");
+    if (!gameCvs) return;
+    gameW = Math.min(window.innerWidth * 0.9, 800);
+    gameH = Math.min(window.innerHeight * 0.7, 400);
+    gameCvs.width = gameW;
+    gameCvs.height = gameH;
+    gameCtx = gameCvs.getContext("2d");
+    gameGY = gameH - 60;
+    resetGame();
+    if (gameLoop) cancelAnimationFrame(gameLoop);
+    tick();
+}
+
+function closeGame() {
+    document.getElementById("game-overlay").classList.remove("show");
+    if (gameLoop) cancelAnimationFrame(gameLoop);
+    gameLoop = null;
+}
+
+function resetGame() {
+    S = {
+        score: 0, hiScore: parseInt(localStorage.getItem("dinoHi")||"0"),
+        speed: 6, frame: 0, over: false, started: false,
+        dino: { x: 60, y: gameGY - DINO_GROUND_Y_OFFSET, vy: 0, onGround: true, leg: 0 },
+        obs: [], groundX: 0, flashTimer: 0,
+    };
+}
+
+// ====== 绘制 ======
+
+function drawDino(d) {
+    const ctx = gameCtx;
+    if (!d || d.leg == null) return;
+    const x = d.x, y = d.y;
+    ctx.save();
+    ctx.translate(x, y);
+
+    // 使用真实宠物图片
+    if (gamePetImg) {
+        const size = 48;
+        const bobY = d.onGround ? Math.abs(Math.sin(d.leg * 0.5)) * 3 : 0;
+        ctx.drawImage(gamePetImg, -size/2, -size + bobY, size, size);
+        // 影子
+        ctx.fillStyle = 'rgba(0,0,0,0.15)';
+        ctx.beginPath();
+        ctx.ellipse(0, 4, size/3, 2, 0, 0, Math.PI*2);
+        ctx.fill();
+        ctx.restore();
+        return;
+    }
+
+    // 回退：绘制小狗
+    const legFrames = [
+        [{dx:7,dy:20},{dx:19,dy:24}],
+        [{dx:7,dy:24},{dx:19,dy:20}],
+        [{dx:9,dy:22},{dx:21,dy:22}],
+        [{dx:5,dy:24},{dx:17,dy:22}],
+    ];
+    const legs = legFrames[Math.floor(d.leg) % 4];
+    if (!legs) { ctx.restore(); return; }
+
+    // 影子
+    ctx.fillStyle = "rgba(0,0,0,0.12)";
+    ctx.beginPath();
+    ctx.ellipse(14, DINO_GROUND_Y_OFFSET + 4, 16, 3.5, 0, 0, Math.PI*2);
+    ctx.fill();
+
+    // 后腿
+    ctx.strokeStyle = "#8B7355"; ctx.lineWidth = 3.5; ctx.lineCap = "round";
+    ctx.beginPath(); ctx.moveTo(legs[0].dx, legs[0].dy); ctx.lineTo(legs[0].dx - 1, DINO_GROUND_Y_OFFSET + 3); ctx.stroke();
+    // 前腿
+    ctx.strokeStyle = "#A0845C"; ctx.lineWidth = 3.5;
+    ctx.beginPath(); ctx.moveTo(legs[1].dx, legs[1].dy); ctx.lineTo(legs[1].dx + 1, DINO_GROUND_Y_OFFSET + 3); ctx.stroke();
+
+    // 身体 — 小狗棕色系
+    ctx.fillStyle = "#d9c5b2";
+    ctx.beginPath();
+    ctx.moveTo(2, 10);
+    ctx.quadraticCurveTo(2, 2, 16, 1);
+    ctx.quadraticCurveTo(24, 0, 30, 6);
+    ctx.quadraticCurveTo(36, 14, 34, 20);
+    ctx.quadraticCurveTo(32, 26, 22, 26);
+    ctx.lineTo(8, 26);
+    ctx.quadraticCurveTo(2, 26, 2, 20);
+    ctx.closePath();
+    ctx.fill();
+
+    // 肚皮
+    ctx.fillStyle = "#f5efe6";
+    ctx.beginPath();
+    ctx.ellipse(14, 18, 10, 6, 0, 0, Math.PI*2);
+    ctx.fill();
+
+    // 头
+    ctx.fillStyle = "#c4a882";
+    ctx.beginPath();
+    ctx.arc(30, 8, 10, 0, Math.PI*2);
+    ctx.fill();
+
+    // 耳朵
+    ctx.fillStyle = "#b8a070";
+    ctx.beginPath();
+    ctx.ellipse(25, 0, 6, 10, -0.3, 0, Math.PI*2);
+    ctx.fill();
+
+    // 眼睛
+    ctx.fillStyle = "#fff";
+    ctx.beginPath(); ctx.arc(33, 5, 4.5, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = "#333";
+    ctx.beginPath(); ctx.arc(34, 5, 2.2, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = "#fff";
+    ctx.beginPath(); ctx.arc(35, 4, 0.8, 0, Math.PI*2); ctx.fill();
+
+    // 鼻子
+    ctx.fillStyle = "#333";
+    ctx.beginPath(); ctx.arc(38, 9, 3, 0, Math.PI*2); ctx.fill();
+    // 鼻头高光
+    ctx.fillStyle = "rgba(255,255,255,0.3)";
+    ctx.beginPath(); ctx.arc(37, 8, 1, 0, Math.PI*2); ctx.fill();
+
+    // 嘴
+    ctx.strokeStyle = "#A0845C"; ctx.lineWidth = 1.2;
+    ctx.beginPath(); ctx.moveTo(33, 13); ctx.quadraticCurveTo(36, 15, 38, 14); ctx.stroke();
+
+    // 尾巴
+    ctx.strokeStyle = "#d9c5b2"; ctx.lineWidth = 3; ctx.lineCap = "round";
+    ctx.beginPath();
+    ctx.moveTo(4, 14);
+    ctx.quadraticCurveTo(-4, 6, -2, -2);
+    ctx.stroke();
+
+    // 前腿小爪子
+    if (!d.onGround) {
+        ctx.strokeStyle = "#A0845C"; ctx.lineWidth = 2.5;
+        ctx.beginPath(); ctx.moveTo(12, 10); ctx.lineTo(6, 2); ctx.stroke();
+    }
+
+    ctx.restore();
+}
+
+function drawCactus(o) {
+    const ctx = gameCtx;
+    ctx.save();
+    ctx.translate(o.x, o.y);
+    const s = o.size; // 0=small, 1=big
+    const w = s ? 20 : 12;
+    const h = s ? 40 : 28;
+
+    ctx.fillStyle = "#7B9E6D";
+    // 主干
+    ctx.fillRect(2, 0, w-4, h);
+    // 左枝
+    ctx.fillStyle = "#6B8E5A";
+    ctx.fillRect(0, h*0.3, 4, h*0.25);
+    ctx.fillRect(-3, h*0.3, 3, 6);
+    // 右枝
+    ctx.fillRect(w-4, h*0.4, 4, h*0.2);
+    ctx.fillRect(w-1, h*0.38, 3, 5);
+
+    // 刺
+    ctx.fillStyle = "#A8C8A0";
+    ctx.fillRect(4, 4, 2, 2);
+    ctx.fillRect(10, 6, 2, 2);
+    ctx.fillRect(6, h-8, 2, 2);
+
+    ctx.restore();
+}
+
+function drawPtera(o) {
+    const ctx = gameCtx;
+    ctx.save();
+    ctx.translate(o.x, o.y);
+    const wingUp = Math.sin(S.frame * 0.25) > 0;
+
+    // 身体
+    ctx.fillStyle = "#535353";
+    ctx.beginPath();
+    ctx.ellipse(12, 12, 10, 5, 0, 0, Math.PI*2);
+    ctx.fill();
+
+    // 翅膀
+    ctx.strokeStyle = "#535353"; ctx.lineWidth = 2;
+    ctx.beginPath();
+    if (wingUp) {
+        ctx.moveTo(12, 12); ctx.quadraticCurveTo(2, -8, -4, -4);
+        ctx.moveTo(12, 12); ctx.quadraticCurveTo(22, -8, 28, -4);
+    } else {
+        ctx.moveTo(12, 12); ctx.quadraticCurveTo(2, -3, -4, 2);
+        ctx.moveTo(12, 12); ctx.quadraticCurveTo(22, -3, 28, 2);
+    }
+    ctx.stroke();
+
+    // 嘴
+    ctx.strokeStyle = "#444"; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(22, 12); ctx.lineTo(26, 14); ctx.stroke();
+    // 眼睛
+    ctx.fillStyle = "#fff";
+    ctx.beginPath(); ctx.arc(17, 10, 2.5, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = "#222";
+    ctx.beginPath(); ctx.arc(18, 10, 1.2, 0, Math.PI*2); ctx.fill();
+
+    ctx.restore();
+}
+
+function rr(ctx, x, y, w, h, r) {
+    ctx.beginPath();
+    ctx.moveTo(x+r, y);
+    ctx.lineTo(x+w-r, y);
+    ctx.quadraticCurveTo(x+w, y, x+w, y+r);
+    ctx.lineTo(x+w, y+h-r);
+    ctx.quadraticCurveTo(x+w, y+h, x+w-r, y+h);
+    ctx.lineTo(x+r, y+h);
+    ctx.quadraticCurveTo(x, y+h, x, y+h-r);
+    ctx.lineTo(x, y+r);
+    ctx.quadraticCurveTo(x, y, x+r, y);
+    ctx.closePath();
+}
+
+function drawCloud(c) {
+    const ctx = gameCtx;
+    ctx.fillStyle = "rgba(255,255,255,0.6)";
+    ctx.beginPath();
+    ctx.ellipse(c.x, c.y, c.w/2, c.h/2, 0, 0, Math.PI*2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.ellipse(c.x - c.w*0.2, c.y + c.h*0.15, c.w*0.35, c.h*0.4, 0, 0, Math.PI*2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.ellipse(c.x + c.w*0.22, c.y + c.h*0.12, c.w*0.3, c.h*0.38, 0, 0, Math.PI*2);
+    ctx.fill();
+}
+
+// ====== 主循环 ======
+
+function tick() {
+    const ctx = gameCtx;
+    const W = gameW, H = gameH;
+    const GY = gameGY;
+    let clouds = S.clouds;
+    if (!clouds) { clouds = []; for (let i=0; i<4; i++) clouds.push({x:i*W/4+Math.random()*60, y:15+Math.random()*H*0.2, w:50+Math.random()*40, h:18+Math.random()*12}); S.clouds = clouds; }
+
+    if (!S.over) {
+        S.frame++;
+        S.groundX = (S.groundX + S.speed) % 12;
+
+        // 恐龙物理
+        const d = S.dino;
+        d.vy += 0.7;
+        d.y += d.vy;
+        if (d.y >= GY - DINO_GROUND_Y_OFFSET) {
+            d.y = GY - DINO_GROUND_Y_OFFSET;
+            d.vy = 0;
+            if (!d.onGround) S.flashTimer = 4;
+            d.onGround = true;
+        }
+
+        if (d.onGround) d.leg = (d.leg + 0.15) % 4;
+
+        // 生成障碍
+        if (S.started) {
+            const minGap = Math.max(50, 180 - S.score);
+            const lastObs = S.obs.length ? S.obs[S.obs.length-1] : null;
+            const canSpawn = !lastObs || lastObs.x < W - minGap;
+
+            if (canSpawn && S.frame % Math.max(60, 150 - Math.floor(S.score/3)) === 0) {
+                if (Math.random() < 0.25 && S.score > 30) {
+                    const h = GY - 15 - Math.random() * 30;
+                    S.obs.push({ x: W + 10, y: h, type: "ptera", w: 28, h: 16 });
+                } else {
+                    const sz = Math.random() < 0.5 ? 0 : 1;
+                    const oh = sz ? 40 : 28;
+                    S.obs.push({ x: W + 10, y: GY - oh, type: "cactus", size: sz, w: sz ? 20 : 12, h: oh });
+                }
+            }
+        }
+
+        // 移动障碍 + 碰撞
+        for (let i = S.obs.length-1; i >= 0; i--) {
+            const o = S.obs[i];
+            o.x -= S.speed;
+            if (o.x < -50) { S.obs.splice(i, 1); S.score += 2; continue; }
+
+            // 碰撞检测
+            const dw = 28, dh = 24;
+            const dx1 = d.x + 4, dy1 = d.y + 6;
+            const ow = o.w * 0.8, oh = o.h * 0.8;
+            const ox1 = o.x + o.w*0.1, oy1 = o.y + o.h*0.1;
+            if (dx1 < ox1 + ow && dx1 + dw > ox1 && dy1 < oy1 + oh && dy1 + dh > oy1) {
+                S.over = true;
+                if (S.score > S.hiScore) { S.hiScore = S.score; localStorage.setItem("dinoHi", S.hiScore); }
+            }
+        }
+
+        // 云
+        clouds.forEach(c => { c.x -= S.speed * 0.3; if (c.x < -80) { c.x = W + 40; c.y = 15 + Math.random() * H * 0.2; } });
+
+        S.speed = 6 + Math.floor(S.score / 25);
+        if (S.speed > 16) S.speed = 16;
+
+        if (S.flashTimer > 0) S.flashTimer--;
+    }
+
+    // === 渲染 ===
+
+    // 天空渐变 (Pawlorful暖色系)
+    const skyGrad = ctx.createLinearGradient(0, 0, 0, H);
+    skyGrad.addColorStop(0, "#fdfbf7");
+    skyGrad.addColorStop(0.4, "#f7efe0");
+    skyGrad.addColorStop(0.8, "#efe0cc");
+    ctx.fillStyle = skyGrad;
+    ctx.fillRect(0, 0, W, H);
+
+    // 装饰太阳
+    ctx.fillStyle = "rgba(253,245,211,0.6)";
+    ctx.beginPath();
+    ctx.arc(W * 0.8, H * 0.18, 40, 0, Math.PI*2);
+    ctx.fill();
+    ctx.fillStyle = "rgba(253,245,211,0.3)";
+    ctx.beginPath();
+    ctx.arc(W * 0.8, H * 0.18, 55, 0, Math.PI*2);
+    ctx.fill();
+
+    // 云
+    clouds.forEach(drawCloud);
+
+    // 远景 (Morandi色建筑剪影)
+    ctx.fillStyle = "#e8ddd0";
+    for (let i = 0; i < 7; i++) {
+        const bx = (i * W/6 - S.groundX * 0.2) % (W + 80) - 40;
+        ctx.fillRect(bx, GY - 30 - (i%3)*20, W/8, 30 + (i%3)*20);
+    }
+
+    // 地面 — 匹配房间地板色
+    ctx.fillStyle = "#C8A87C";
+    ctx.fillRect(0, GY, W, H - GY);
+    // 草地线
+    ctx.fillStyle = "#6B8E23";
+    ctx.fillRect(0, GY, W, 4);
+    // 浅色草尖
+    ctx.fillStyle = "#7FA832";
+    ctx.fillRect(0, GY, W, 1.5);
+    // 地板纹理
+    ctx.fillStyle = "rgba(160,130,90,0.2)";
+    const gx = S.groundX;
+    for (let i = -gx; i < W + 20; i += 16) {
+        ctx.fillRect(i, GY + 14, 8, 1);
+    }
+    for (let i = -gx*1.3; i < W + 30; i += 36) {
+        ctx.fillRect(i, GY + 30, 5, 1);
+    }
+
+    // 障碍
+    S.obs.forEach(o => { if (o.type === "cactus") drawCactus(o); else drawPtera(o); });
+
+    // 小狗
+    if (S.flashTimer > 0) ctx.globalAlpha = 0.5 + Math.sin(S.flashTimer * 5) * 0.3;
+    drawDino(S.dino);
+    ctx.globalAlpha = 1;
+
+    // 分数 — 毛玻璃风格
+    ctx.fillStyle = "rgba(255,255,255,0.75)";
+    ctx.beginPath();
+    const scoreW = 130, scoreH = 38;
+    rr(ctx, W - scoreW - 16, 8, scoreW, scoreH, 20);
+    ctx.fill();
+    ctx.strokeStyle = "rgba(255,255,255,0.5)";
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    ctx.fillStyle = "#333";
+    ctx.font = "bold 18px Microsoft YaHei, monospace";
+    ctx.textAlign = "right";
+    ctx.fillText("🪙 " + String(Math.floor(S.score)).padStart(4,"0"), W - 24, 36);
+
+    if (S.hiScore > 0) {
+        ctx.fillStyle = "rgba(255,255,255,0.6)";
+        ctx.beginPath();
+        rr(ctx, W - 100, 52, 80, 24, 12);
+        ctx.fill();
+        ctx.fillStyle = "#999";
+        ctx.font = "11px Microsoft YaHei, monospace";
+        ctx.textAlign = "right";
+        ctx.fillText("HI " + String(S.hiScore).padStart(4,"0"), W - 20, 70);
+    }
+
+    if (!S.started) {
+        ctx.fillStyle = "rgba(0,0,0,0.25)";
+        ctx.font = "bold 16px Microsoft YaHei, monospace";
+        ctx.textAlign = "center";
+        ctx.fillText("空格 / 点击 开始游戏", W/2, H/2 - 10);
+    }
+
+    if (S.over) {
+        ctx.fillStyle = "rgba(0,0,0,0.55)";
+        ctx.fillRect(0, 0, W, H);
+        ctx.fillStyle = "rgba(255,255,255,0.95)";
+        ctx.beginPath();
+        rr(ctx, W/2 - 130, H/2 - 45, 260, 80, 20);
+        ctx.fill();
+        ctx.fillStyle = "#333";
+        ctx.font = "bold 22px Microsoft YaHei, monospace";
+        ctx.textAlign = "center";
+        ctx.fillText("GAME OVER", W/2, H/2 - 10);
+        ctx.fillStyle = "#666";
+        ctx.font = "13px Microsoft YaHei, monospace";
+        ctx.fillText("🪙 " + S.score + "  —  点击重新开始", W/2, H/2 + 22);
+    }
+
+    gameLoop = requestAnimationFrame(tick);
+}
+
+function jump() {
+    if (!S) return;
+    if (S.over) { resetGame(); return; }
+    S.started = true;
+    if (S.dino.onGround) { S.dino.vy = -12; S.dino.onGround = false; }
+}
+
+gameCvs = document.getElementById("game-canvas");
+if (gameCvs) {
+    gameCvs.onclick = function() { jump(); };
+}
+document.addEventListener("keydown", function h(e) {
+    if ((e.code === "Space" || e.code === "ArrowUp") && document.getElementById("game-overlay").classList.contains("show")) {
+        e.preventDefault(); jump();
+    }
+});
+
+// ========== 宠物互动 ==========
+function petAction(action) {
+    const pet = document.getElementById('pet-box');
+    if (!pet) return;
+    const emojis = { feed: '🍖', pet: '💖', bath: '🛁' };
+    const pop = document.createElement('span');
+    pop.textContent = emojis[action] || '❤️';
+    pop.style.cssText = 'position:fixed;font-size:24px;pointer-events:none;z-index:2000;transition:all 1s ease-out;';
+    const pr = pet.getBoundingClientRect();
+    pop.style.left = (pr.left + pr.width/2 - 12) + 'px';
+    pop.style.top = (pr.top - 10) + 'px';
+    document.body.appendChild(pop);
+    requestAnimationFrame(() => {
+        pop.style.transform = 'translateY(-40px)';
+        pop.style.opacity = '0';
+    });
+    setTimeout(() => pop.remove(), 1000);
+
+    // 互动时切换宠物状态
+    if (action === 'feed') setPetState('normal');
+    if (action === 'pet') setPetState('exercise');
+    if (action === 'bath') setPetState('normal');
+}
+
+// ========== 任务系统 ==========
+function closeTasks(e) {
+    if (!e || e.target === document.getElementById('tasks-overlay')) {
+        document.getElementById('tasks-overlay').classList.remove('show');
+    }
+}
+
+function claimTask(btn, amount) {
+    if (btn.disabled) return;
+    btn.disabled = true;
+    btn.textContent = '已领取';
+    btn.className = 'task-btn claimed';
+    const el = document.getElementById('coin-count');
+    if (el) el.textContent = parseInt(el.textContent) + amount;
+}
+
+function startBrowse(btn) {
+    if (btn.dataset.running) return;
+    window.open('https://www.pawlorful.shop', '_blank');
+    btn.dataset.running = '1';
+    btn.textContent = '180s';
+    btn.className = 'task-btn timer';
+    let t = 180;
+    const timer = setInterval(() => {
+        t--;
+        if (t > 0) { btn.textContent = t + 's'; }
+        else {
+            clearInterval(timer);
+            btn.className = 'task-btn claim';
+            btn.textContent = '+30 💰';
+            btn.dataset.running = '';
+            btn.onclick = function() { claimTask(btn, 30); };
+        }
+    }, 1000);
+}
+
+function sharePet(platform) {
+    const urls = {
+        'TikTok': 'https://www.tiktok.com/upload',
+        'Instagram': 'https://www.instagram.com/',
+        'Reddit': 'https://www.reddit.com/submit',
+        'Facebook': 'https://www.facebook.com/sharer/sharer.php',
+    };
+    window.open(urls[platform], '_blank');
+}
+</script>
+<div id="scene-overlay" onclick="this.classList.remove('show')">
+    <button id="scene-close" onclick="document.getElementById('scene-overlay').classList.remove('show')">&times;</button>
+    <img src="dressup_scene.jpg" alt="换装场景" onclick="event.stopPropagation()">
+</div>
+</body>
+</html>
