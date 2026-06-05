@@ -390,8 +390,8 @@ function loadFurniture(W, H) {
     const objs = canvas.getObjects().filter(o => o.furnitureType);
     objs.forEach(o => canvas.remove(o));
 
-    // 统一缩放因子（基于宽度，防止变形）
-    const s = W / REF_W;
+    // 统一缩放因子（基于宽度，限制在0.6~1.4倍防止极端变形）
+    const s = Math.max(0.6, Math.min(1.4, W / REF_W));
 
     // 按比例加载所有家具
     FURNITURE_DEFS.forEach(def => {
