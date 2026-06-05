@@ -276,15 +276,17 @@ const REF_W = 1000;
 const REF_H = 550;
 
 // 所有家具用比例定义，自动适应任意屏幕
+// leftR/topR = 位置比例（相对于参考分辨率）
+// scaleR = 原始缩放值（乘以 s=W/REF_W 后得到自适应缩放）
 const FURNITURE_DEFS = [
-    { name:'沙发',   src:'sofa_no_bg.png',           leftR:484/1000, topR:176/550, scaleR:0.1357/1000 },
-    { name:'桌子',   src:'table_yellow_no_bg.png',   leftR:309/1000, topR:222/550, scaleR:0.0835/1000 },
-    { name:'落地灯', src:'lamp_no_bg.png',           leftR:674/1000, topR:177/550, scaleR:0.1202/1000 },
-    { name:'坐垫',   src:'cushion_pink_no_bg.png',   leftR:510/1000, topR:302/550, scaleR:0.1163/1000 },
-    { name:'房子图标', src:'house_icon_no_bg.png',   leftR:27/1000,  topR:83/550,  scaleR:0.0309/1000, cursor:'pointer' },
-    { name:'公告栏', src:'board_no_bg.png',          leftR:420/1000, topR:157/550, scaleR:0.0443/1000, cursor:'pointer', glow:true },
-    { name:'盆栽',   src:'plant_pot_no_bg.png',      leftR:357/1000, topR:223/550, scaleR:0.0342/1000 },
-    { name:'书架',   src:'bookshelf_no_bg.png',      leftR:857/1000, topR:121/550, scaleR:0.1253/1000 },
+    { name:'沙发',   src:'sofa_no_bg.png',           leftR:484/1000, topR:176/550, scaleR:0.1357 },
+    { name:'桌子',   src:'table_yellow_no_bg.png',   leftR:309/1000, topR:222/550, scaleR:0.0835 },
+    { name:'落地灯', src:'lamp_no_bg.png',           leftR:674/1000, topR:177/550, scaleR:0.1202 },
+    { name:'坐垫',   src:'cushion_pink_no_bg.png',   leftR:510/1000, topR:302/550, scaleR:0.1163 },
+    { name:'房子图标', src:'house_icon_no_bg.png',   leftR:27/1000,  topR:83/550,  scaleR:0.0309, cursor:'pointer' },
+    { name:'公告栏', src:'board_no_bg.png',          leftR:420/1000, topR:157/550, scaleR:0.0443, cursor:'pointer', glow:true },
+    { name:'盆栽',   src:'plant_pot_no_bg.png',      leftR:357/1000, topR:223/550, scaleR:0.0342 },
+    { name:'书架',   src:'bookshelf_no_bg.png',      leftR:857/1000, topR:121/550, scaleR:0.1253 },
 ];
 
 function init() {
@@ -440,8 +442,8 @@ function loadFurniture(W, H) {
         const fImg = new fabric.Image(dressupImg, {
             left: 65/1000 * W,
             top:  77/550  * H,
-            scaleX: 0.036/1000 * s,
-            scaleY: 0.036/1000 * s,
+            scaleX: 0.036 * s,
+            scaleY: 0.036 * s,
             angle: 0,
             furnitureType: '换装图标',
             hasControls: false, hasBorders: false, selectable: false,
