@@ -237,13 +237,6 @@ canvas { display:block; }
 </head>
 <body>
 
-<!-- 临时：显示屏幕宽度，调试完删除 -->
-<div id="debug-size" style="position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:99999;background:rgba(0,0,0,0.85);color:#fff;font-size:48px;padding:40px 60px;border-radius:20px;text-align:center;font-family:monospace;">
-屏幕宽度：<script>document.write(window.innerWidth)</script> px
-<br><br>
-<span style="font-size:20px;color:#aaa;">请把这个数字告诉我</span>
-</div>
-
 <canvas id="roomCanvas"></canvas>
 <div id="top-bar">
     <div class="avatar"><img src="pet_no_bg.png" alt="pet"></div>
@@ -278,22 +271,22 @@ const furnitureData = [];   // 家具加载信息
 let petMoveTimer = null, petStateTimer = null, petBlinkTimer = null;
 let petCurrentState = 'normal', petFacingRight = true;
 
-// === 参考分辨率（家具位置在此分辨率下调整的） ===
-const REF_W = 1000;
-const REF_H = 550;
+// === 参考分辨率（用户在1232px宽屏幕下调整的家具位置） ===
+const REF_W = 1232;
+const REF_H = 693;
 
 // 所有家具用比例定义，自动适应任意屏幕
 // leftR/topR = 位置比例（相对于参考分辨率）
 // scaleR = 原始缩放值（乘以 s=W/REF_W 后得到自适应缩放）
 const FURNITURE_DEFS = [
-    { name:'沙发',   src:'sofa_no_bg.png',           leftR:484/1000, topR:176/550, scaleR:0.1357 },
-    { name:'桌子',   src:'table_yellow_no_bg.png',   leftR:309/1000, topR:222/550, scaleR:0.0835 },
-    { name:'落地灯', src:'lamp_no_bg.png',           leftR:674/1000, topR:177/550, scaleR:0.1202 },
-    { name:'坐垫',   src:'cushion_pink_no_bg.png',   leftR:510/1000, topR:302/550, scaleR:0.1163 },
-    { name:'房子图标', src:'house_icon_no_bg.png',   leftR:27/1000,  topR:83/550,  scaleR:0.0309, cursor:'pointer' },
-    { name:'公告栏', src:'board_no_bg.png',          leftR:420/1000, topR:157/550, scaleR:0.0443, cursor:'pointer', glow:true },
-    { name:'盆栽',   src:'plant_pot_no_bg.png',      leftR:357/1000, topR:223/550, scaleR:0.0342 },
-    { name:'书架',   src:'bookshelf_no_bg.png',      leftR:857/1000, topR:121/550, scaleR:0.1253 },
+    { name:'沙发',   src:'sofa_no_bg.png',           leftR:484/1232, topR:176/693, scaleR:0.1357 },
+    { name:'桌子',   src:'table_yellow_no_bg.png',   leftR:309/1232, topR:222/693, scaleR:0.0835 },
+    { name:'落地灯', src:'lamp_no_bg.png',           leftR:674/1232, topR:177/693, scaleR:0.1202 },
+    { name:'坐垫',   src:'cushion_pink_no_bg.png',   leftR:510/1232, topR:302/693, scaleR:0.1163 },
+    { name:'房子图标', src:'house_icon_no_bg.png',   leftR:27/1232,  topR:83/693,  scaleR:0.0309, cursor:'pointer' },
+    { name:'公告栏', src:'board_no_bg.png',          leftR:420/1232, topR:157/693, scaleR:0.0443, cursor:'pointer', glow:true },
+    { name:'盆栽',   src:'plant_pot_no_bg.png',      leftR:357/1232, topR:223/693, scaleR:0.0342 },
+    { name:'书架',   src:'bookshelf_no_bg.png',      leftR:857/1232, topR:121/693, scaleR:0.1253 },
 ];
 
 function init() {
@@ -447,8 +440,8 @@ function loadFurniture(W, H) {
     const dressupImg = new Image();
     dressupImg.onload = function() {
         const fImg = new fabric.Image(dressupImg, {
-            left: 65/1000 * W,
-            top:  77/550  * H,
+            left: 65/1232 * W,
+            top:  77/693  * H,
             scaleX: 0.036 * s,
             scaleY: 0.036 * s,
             angle: 0,
