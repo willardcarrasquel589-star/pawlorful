@@ -239,7 +239,7 @@ canvas { display:block; }
 
 <!-- 临时：显示屏幕宽度，调试完删除 -->
 <div id="debug-size" style="position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:99999;background:rgba(0,0,0,0.85);color:#fff;font-size:48px;padding:40px 60px;border-radius:20px;text-align:center;font-family:monospace;">
-屏幕宽度：<span id="debug-w"></span> px
+屏幕宽度：<script>document.write(window.innerWidth)</script> px
 <br><br>
 <span style="font-size:20px;color:#aaa;">请把这个数字告诉我</span>
 </div>
@@ -647,7 +647,6 @@ function rebuild() {
 }
 
 init();
-document.getElementById('debug-w').textContent = window.innerWidth;
 </script>
 
 <!-- 任务列表弹窗 -->
